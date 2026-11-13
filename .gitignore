@@ -1,4 +1,5 @@
 .env
+README_PRIVATE.md
 *.sqlite3
 __pycache__/
 .venv/
