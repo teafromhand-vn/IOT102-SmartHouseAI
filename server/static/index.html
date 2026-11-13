@@ -1,0 +1,17 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart House AI 2.0</title><style>
+:root{font-family:system-ui,Arial;color:#172438;background:#f3f6fa}body{max-width:1050px;margin:32px auto;padding:0 16px}h1{margin-bottom:4px}.muted{color:#65758c}section{background:white;padding:20px;border:1px solid #dbe2ed;border-radius:12px;margin:15px 0}button,input,select{font:inherit;padding:9px;border:1px solid #c8d1df;border-radius:7px}button{background:#244d91;color:white;cursor:pointer;margin:3px}button:hover{background:#183c76}input{min-width:220px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f6f8fa;padding:12px;border-radius:8px}#feedback{min-height:24px}.control{display:inline-block;margin-right:12px;margin-bottom:12px}
+</style></head><body><h1>Smart House AI 2.0</h1><div class="muted">Trang điều khiển thử nghiệm • kết nối tới FastAPI trong mạng nội bộ</div>
+<section><h3>Đăng nhập quản trị</h3><input type="password" id="token" placeholder="X-Admin-Token"><button onclick="connect()">Kết nối</button><p class="muted">Token chỉ được giữ trong bộ nhớ của tab, không lưu vào trình duyệt.</p><div id="feedback"></div></section>
+<section><h3>Trạng thái cảm biến</h3><pre id="status">Chưa kết nối</pre><button onclick="refresh()">Làm mới</button></section>
+<section><h3>Điều khiển</h3><div id="buttons"></div><small class="muted">Lệnh chỉ được đưa vào hàng đợi; kiểm tra trạng thái EXECUTED ở mục lịch sử.</small></section>
+<section><h3>Gemini (tùy chọn)</h3><input id="ask" placeholder="Ví dụ: bật đèn phòng khách" style="width:65%"><button onclick="askAI()">Gửi</button><pre id="answer">Chưa có tin nhắn</pre></section>
+<section><h3>Lịch sử lệnh</h3><pre id="commands">—</pre></section><section><h3>Sự kiện</h3><pre id="events">—</pre></section>
+<script>
+let token='';const $=id=>document.getElementById(id);const options={light:['on','off'],night_light:['on','off'],fan:['on','off'],curtain:['open','close']};
+for(const [dev,actions] of Object.entries(options)){let div=document.createElement('div');div.className='control';div.append(document.createTextNode(dev+': '));for(const a of actions){let b=document.createElement('button');b.textContent=a;b.onclick=()=>sendCmd(dev,a);div.append(b)}$('buttons').append(div)}
+async function api(path,method='GET',body){if(!token)throw Error('Nhập Admin Token trước');let r=await fetch(path,{method,headers:{'X-Admin-Token':token,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});if(!r.ok)throw Error(r.status+' '+await r.text());return r.json()}
+function connect(){token=$('token').value;$('token').value='';refresh()}
+async function refresh(){try{let [s,c,e]=await Promise.all([api('/api/status'),api('/api/commands'),api('/api/events')]);$('status').textContent=JSON.stringify(s,null,2);$('commands').textContent=JSON.stringify(c.commands,null,2);$('events').textContent=JSON.stringify(e.events,null,2);$('feedback').textContent='Đã kết nối'}catch(e){$('feedback').textContent=e.message}}
+async function sendCmd(device,action){try{let x=await api('/api/command','POST',{device,action});$('feedback').textContent='Đã xếp hàng lệnh #'+x.id;await refresh()}catch(e){$('feedback').textContent=e.message}}
+async function askAI(){try{let x=await api('/api/ask','POST',{message:$('ask').value});$('answer').textContent=JSON.stringify(x,null,2);await refresh()}catch(e){$('answer').textContent=e.message}}
+</script></body></html>
